@@ -86,12 +86,7 @@ def init_db():
     cursor.execute("SELECT COUNT(*) FROM categories")
     if cursor.fetchone()[0] == 0:
         default_categories = [
-            ("Computer Science", "Artificial intelligence, systems, algorithms, software engineering."),
-            ("Materials Science", "Structure, properties, and applications of materials and synthesis."),
-            ("Chemistry", "Chemical compounds, synthesis, processes, and reaction methodologies."),
-            ("Biology", "Biological structures, genetics, biochemistry, and life sciences."),
-            ("Engineering", "Mechanical, electrical, aerospace, civil, and device manufacturing engineering."),
-            ("Physics", "Quantum mechanics, condensed matter, materials physics, and theory.")
+            ("Hardware Reliability Engineering", "Hardware failure analysis, electromigration, thermal modeling, and physical reliability simulation.")
         ]
         cursor.executemany("INSERT INTO categories (name, description) VALUES (?, ?)", default_categories)
         conn.commit()
