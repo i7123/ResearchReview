@@ -274,6 +274,117 @@ def get_paper_traces(paper_id: str):
         formatted_traces.append(t_dict)
     return formatted_traces
 
+@app.get("/api/export/csv")
+def export_csv():
+    import csv
+    import io
+    import json
+    from fastapi.responses import StreamingResponse
+    
+    # 1. Fetch papers from DB
+    papers_list = database.list_papers()
+    
+    # 2. Prepare string buffer for CSV
+    output = io.StringIO()
+    writer = csv.writer(output)
+    
+    # 3. Write header row
+    writer.writerow([
+        "Paper Title",
+        "Authors",
+        "ArXiv ID",
+        "Category",
+        "Overall Score (1-5)",
+        "Strengths",
+        "Weaknesses",
+        "Scientific Novelty",
+        "Technical Correctness",
+        "Estimated Cost",
+        "Feasibility Recommendations",
+        "Feedback History (Comments)"
+    ])
+    
+    # 4. Write data rows
+    for p in papers_list:
+        paper_id = p["id"]
+        review = database.get_review(paper_id)
+        feedback_logs = database.get_feedback_logs(paper_id)
+        
+        # Parse fields from review
+        strengths_str = ""
+        weaknesses_str = ""
+        novelty_str = ""
+        tech_corr_str = ""
+        overall_score = ""
+        cost_str = ""
+        feas_rec_str = ""
+        
+        if review:
+            overall_score = review.get("overall_score", "")
+            novelty_str = review.get("novelty", "")
+            tech_corr_str = review.get("technical_correctness", "")
+            
+            try:
+                strengths = json.loads(review.get("strengths", "[]"))
+                strengths_str = "; ".join(strengths)
+            except Exception:
+                strengths_str = review.get("strengths", "")
+                
+            try:
+                weaknesses = json.loads(review.get("weaknesses", "[]"))
+                weaknesses_str = "; ".join(weaknesses)
+            except Exception:
+                weaknesses_str = review.get("weaknesses", "")
+                
+            feas_report_str = review.get("feasibility_report")
+            if feas_report_str:
+                try:
+                    feas_report = json.loads(feas_report_str)
+                    cost_str = feas_report.get("estimated_cost", "")
+                    feas_rec_str = feas_report.get("recommendations", "")
+                except Exception:
+                    pass
+                    
+        # Compile feedback history logs into a single summary string
+        feedback_str = ""
+        if feedback_logs:
+            log_entries = []
+            for idx, log in enumerate(feedback_logs):
+                f_text = log.get("user_feedback", "") or ""
+                r_text = log.get("agent_reflection", "") or ""
+                log_entries.append(
+                    f"Iteration #{idx+1}: [User Feedback] {f_text.strip()} "
+                    f"[Agent Reflection] {r_text.strip()}"
+                )
+            feedback_str = " | ".join(log_entries)
+            
+        writer.writerow([
+            p.get("title", ""),
+            p.get("authors", ""),
+            p.get("arxiv_id", "") or "",
+            p.get("category_name", "") or "Uncategorized",
+            overall_score,
+            strengths_str,
+            weaknesses_str,
+            novelty_str,
+            tech_corr_str,
+            cost_str,
+            feas_rec_str,
+            feedback_str
+        ])
+        
+    output.seek(0)
+    
+    headers = {
+        'Content-Disposition': 'attachment; filename="research_review_export.csv"'
+    }
+    
+    return StreamingResponse(
+        iter([output.getvalue()]),
+        media_type="text/csv",
+        headers=headers
+    )
+
 @app.post("/api/import/pdf")
 def import_pdf(background_tasks: BackgroundTasks, file: UploadFile = File(...), model: str = Form(agents.DEFAULT_MODEL)):
     paper_id = uuid.uuid4().hex

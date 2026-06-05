@@ -5,6 +5,7 @@ let selectedPaperId = null;
 let activeWorkspaceTab = 'logs'; // logs, review, feasibility, reflection, traces
 let activeImportTab = 'arxiv'; // arxiv, upload
 let selectedFile = null;
+let selectedFiles = [];
 let logPollInterval = null;
 let globalPollInterval = null;
 let currentTraces = [];
@@ -48,25 +49,41 @@ function setupDragAndDrop() {
         e.preventDefault();
         dropZone.classList.remove('dragover');
         if (e.dataTransfer.files.length > 0) {
-            handleFile(e.dataTransfer.files[0]);
+            handleFiles(e.dataTransfer.files);
         }
     });
 }
 
 function handleFileSelect(e) {
     if (e.target.files.length > 0) {
-        handleFile(e.target.files[0]);
+        handleFiles(e.target.files);
     }
 }
 
-function handleFile(file) {
-    if (file.type !== 'application/pdf') {
-        alert('Please select a valid PDF document.');
+function handleFiles(fileList) {
+    const validFiles = [];
+    for (let i = 0; i < fileList.length; i++) {
+        const file = fileList[i];
+        if (file.type === 'application/pdf') {
+            validFiles.push(file);
+        }
+    }
+    
+    if (validFiles.length === 0) {
+        alert('Please select valid PDF documents.');
         return;
     }
-    selectedFile = file;
+    
+    selectedFiles = validFiles;
     const dropZone = document.getElementById('drop-zone');
-    dropZone.querySelector('p').innerHTML = `Selected: <strong>${file.name}</strong> (${(file.size / 1024 / 1024).toFixed(2)} MB)`;
+    
+    if (selectedFiles.length === 1) {
+        const file = selectedFiles[0];
+        dropZone.querySelector('p').innerHTML = `Selected: <strong>${escapeHTML(file.name)}</strong> (${(file.size / 1024 / 1024).toFixed(2)} MB)`;
+    } else {
+        dropZone.querySelector('p').innerHTML = `Selected: <strong>${selectedFiles.length} PDF files</strong>`;
+    }
+    
     document.getElementById('btn-import-upload').removeAttribute('disabled');
 }
 
@@ -563,41 +580,59 @@ async function importFromArxiv() {
     }
 }
 
-// Core Operations: Upload PDF
+// Core Operations: Upload PDF (supports batch uploads)
 async function uploadPDF() {
-    if (!selectedFile) return;
+    if (selectedFiles.length === 0) return;
     
     const model = document.getElementById('global-model-select').value;
-    const formData = new FormData();
-    formData.append('file', selectedFile);
-    formData.append('model', model);
+    const dropZone = document.getElementById('drop-zone');
     
-    showGlobalLoading("Uploading and reading file content...");
+    let lastPaperId = null;
+    let successCount = 0;
+    let failCount = 0;
     
-    try {
-        const res = await fetch('/api/import/pdf', {
-            method: 'POST',
-            body: formData
-        });
+    showGlobalLoading(`Processing 1 of ${selectedFiles.length} files...`);
+    
+    for (let i = 0; i < selectedFiles.length; i++) {
+        const file = selectedFiles[i];
+        showGlobalLoading(`Processing file ${i + 1} of ${selectedFiles.length}: ${file.name}...`);
         
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.detail || 'Failed to upload PDF');
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('model', model);
         
-        // Reset file select UI
-        selectedFile = null;
-        const dropZone = document.getElementById('drop-zone');
-        dropZone.querySelector('p').innerHTML = `Drag PDF here, or <span>browse</span>`;
-        document.getElementById('btn-import-upload').setAttribute('disabled', 'true');
-        
-        hideGlobalLoading();
-        
-        // Reload Library & Select
-        await fetchPapers(false);
-        selectPaper(data.paper_id);
-        
-    } catch (err) {
-        hideGlobalLoading();
-        alert(err.message);
+        try {
+            const res = await fetch('/api/import/pdf', {
+                method: 'POST',
+                body: formData
+            });
+            
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.detail || `Failed to upload ${file.name}`);
+            
+            lastPaperId = data.paper_id;
+            successCount++;
+        } catch (err) {
+            console.error(err);
+            failCount++;
+        }
+    }
+    
+    // Reset file select UI
+    selectedFiles = [];
+    dropZone.querySelector('p').innerHTML = `Drag PDF(s) here, or <span>browse</span>`;
+    document.getElementById('btn-import-upload').setAttribute('disabled', 'true');
+    
+    hideGlobalLoading();
+    
+    if (failCount > 0) {
+        alert(`Batch upload complete. Successfully processed: ${successCount} files. Failed: ${failCount} files.`);
+    }
+    
+    // Reload Library & Select the last processed paper
+    await fetchPapers(false);
+    if (lastPaperId) {
+        selectPaper(lastPaperId);
     }
 }
 
@@ -851,4 +886,8 @@ function renderTraceDetails(trace) {
             <pre class="json-block"><code>${escapeHTML(outputJsonStr)}</code></pre>
         </div>
     `;
+}
+
+function exportLibraryCSV() {
+    window.location.href = '/api/export/csv';
 }

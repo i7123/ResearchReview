@@ -293,6 +293,15 @@ textarea {
     width: 100%;
 }
 
+.btn-small {
+    padding: 4px 8px;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+    gap: 4px;
+    border-radius: 2px;
+}
+
 .btn-icon {
     background: none;
     border: none;

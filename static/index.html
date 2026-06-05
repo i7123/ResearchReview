@@ -55,11 +55,11 @@
                 <div id="import-upload-panel" class="import-panel">
                     <div class="file-drop-zone" id="drop-zone">
                         <i class="fa-solid fa-file-pdf"></i>
-                        <p>Drag PDF here, or <span>browse</span></p>
-                        <input type="file" id="file-input" accept="application/pdf" style="display: none;" onchange="handleFileSelect(event)" />
+                        <p>Drag PDF(s) here, or <span>browse</span></p>
+                        <input type="file" id="file-input" accept="application/pdf" style="display: none;" onchange="handleFileSelect(event)" multiple />
                     </div>
                     <button id="btn-import-upload" class="btn btn-primary btn-block" onclick="uploadPDF()" disabled>
-                        <i class="fa-solid fa-upload"></i> Process Selected PDF
+                        <i class="fa-solid fa-upload"></i> Process Selected PDF(s)
                     </button>
                 </div>
             </section>
@@ -79,7 +79,12 @@
 
             <!-- Paper Library List -->
             <section class="sidebar-section flex-grow">
-                <h2 class="section-title"><i class="fa-solid fa-book-open"></i> Paper Library</h2>
+                <div class="section-header">
+                    <h2 class="section-title"><i class="fa-solid fa-book-open"></i> Paper Library</h2>
+                    <button class="btn btn-secondary btn-small" id="btn-export-csv" onclick="exportLibraryCSV()" title="Export Library to CSV">
+                        <i class="fa-solid fa-file-csv"></i> Export
+                    </button>
+                </div>
                 <div class="search-box">
                     <i class="fa-solid fa-magnifying-glass"></i>
                     <input type="text" id="library-search" placeholder="Search papers..." oninput="filterPapers()" />
