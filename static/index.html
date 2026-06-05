@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ResearchReview — Multi-Agent Peer Evaluation & Replication Engine</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Lora:ital,wght@0,400;0,500;0,600;1,400&family=Montserrat:wght@300;400;500;600&family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
+    <!-- FontAwesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <header class="app-header">
+        <div class="header-content">
+            <h1 class="logo">ResearchReview</h1>
+            <p class="tagline">Multi-Agent Peer Evaluation &amp; Replication Advisory Engine</p>
+        </div>
+        <div class="model-selector-container">
+            <label for="global-model-select"><i class="fa-solid fa-microchip"></i> Active Agent Model:</label>
+            <select id="global-model-select">
+                <option value="google:gemini-3.5-flash" selected>Google Gemini 3.5 Flash (Recommended)</option>
+                <option value="openai:gpt-4o-mini">OpenAI GPT-4o Mini</option>
+                <option value="openai:gpt-4o">OpenAI GPT-4o</option>
+                <option value="anthropic:claude-3-5-sonnet-20260603">Anthropic Claude 3.5 Sonnet</option>
+            </select>
+        </div>
+    </header>
+
+    <div class="app-layout">
+        <!-- Sidebar: Library & Importer -->
+        <aside class="sidebar">
+            <section class="sidebar-section">
+                <h2 class="section-title"><i class="fa-solid fa-file-import"></i> Import Document</h2>
+                
+                <!-- Tab headers for import methods -->
+                <div class="import-tabs">
+                    <button class="import-tab-btn active" id="btn-tab-arxiv" onclick="switchImportTab('arxiv')">arXiv ID / URL</button>
+                    <button class="import-tab-btn" id="btn-tab-upload" onclick="switchImportTab('upload')">PDF File Upload</button>
+                </div>
+
+                <!-- Arxiv Importer -->
+                <div id="import-arxiv-panel" class="import-panel active">
+                    <div class="form-group">
+                        <input type="text" id="arxiv-input" placeholder="e.g. 1706.03762 or https://arxiv.org/abs/1706.03762" />
+                    </div>
+                    <button id="btn-import-arxiv" class="btn btn-primary btn-block" onclick="importFromArxiv()">
+                        <i class="fa-solid fa-cloud-arrow-down"></i> Fetch &amp; Analyze
+                    </button>
+                </div>
+
+                <!-- File Importer -->
+                <div id="import-upload-panel" class="import-panel">
+                    <div class="file-drop-zone" id="drop-zone">
+                        <i class="fa-solid fa-file-pdf"></i>
+                        <p>Drag PDF here, or <span>browse</span></p>
+                        <input type="file" id="file-input" accept="application/pdf" style="display: none;" onchange="handleFileSelect(event)" />
+                    </div>
+                    <button id="btn-import-upload" class="btn btn-primary btn-block" onclick="uploadPDF()" disabled>
+                        <i class="fa-solid fa-upload"></i> Process Selected PDF
+                    </button>
+                </div>
+            </section>
+
+            <!-- Customizable Categories Section -->
+            <section class="sidebar-section">
+                <div class="section-header">
+                    <h2 class="section-title"><i class="fa-solid fa-tags"></i> Taxonomies</h2>
+                    <button class="btn-icon" onclick="openAddCategoryModal()" title="Add custom category">
+                        <i class="fa-solid fa-plus"></i>
+                    </button>
+                </div>
+                <div class="categories-list" id="categories-container">
+                    <!-- Categories will be dynamically inserted here -->
+                </div>
+            </section>
+
+            <!-- Paper Library List -->
+            <section class="sidebar-section flex-grow">
+                <h2 class="section-title"><i class="fa-solid fa-book-open"></i> Paper Library</h2>
+                <div class="search-box">
+                    <i class="fa-solid fa-magnifying-glass"></i>
+                    <input type="text" id="library-search" placeholder="Search papers..." oninput="filterPapers()" />
+                </div>
+                <div class="papers-list" id="papers-container">
+                    <!-- Papers list will populate here -->
+                </div>
+            </section>
+        </aside>
+
+        <!-- Main Workspace -->
+        <main class="main-content">
+            <!-- No Paper Selected State -->
+            <div id="empty-state" class="empty-state">
+                <div class="empty-state-card">
+                    <i class="fa-solid fa-compass-drafting logo-icon"></i>
+                    <h2>No Document Selected</h2>
+                    <p>Select an academic paper from the library, or import a new one via arXiv URL or PDF upload to initiate the multi-agent peer review pipeline.</p>
+                </div>
+            </div>
+
+            <!-- Paper Detailed Workspace -->
+            <article id="paper-workspace" class="paper-workspace" style="display: none;">
+                <!-- Paper Header Card -->
+                <header class="paper-header-card">
+                    <div id="paper-category-badge" class="category-badge">MATERIALS SCIENCE</div>
+                    <h1 id="paper-display-title">Attention Is All You Need</h1>
+                    <div class="paper-authors" id="paper-display-authors">Ashish Vaswani, Noam Shazeer, Niki Parmar, Jakob Uszkoreit</div>
+                    <div class="paper-metadata-row">
+                        <span id="paper-display-arxiv"><i class="fa-solid fa-link"></i> arXiv:1706.03762</span>
+                        <span id="paper-display-date"><i class="fa-solid fa-calendar-days"></i> Added June 3, 2026</span>
+                        <a id="paper-pdf-link" href="#" target="_blank" class="pdf-link-btn"><i class="fa-solid fa-file-pdf"></i> Read Original PDF</a>
+                    </div>
+                </header>
+
+                <!-- Paper Abstract Section -->
+                <section class="paper-abstract-section">
+                    <h3 class="abstract-title">Abstract</h3>
+                    <p id="paper-display-abstract">
+                        The dominant sequence transduction models are based on complex recurrent or convolutional neural networks...
+                    </p>
+                </section>
+
+                <!-- Agent Workspace Navigation -->
+                <nav class="workspace-tabs">
+                    <button class="tab-link active" onclick="switchWorkspaceTab('logs')">
+                        <i class="fa-solid fa-terminal"></i> Ingestion Logs
+                    </button>
+                    <button class="tab-link" id="tab-btn-review" onclick="switchWorkspaceTab('review')">
+                        <i class="fa-solid fa-graduation-cap"></i> Peer Review
+                    </button>
+                    <button class="tab-link" id="tab-btn-feasibility" onclick="switchWorkspaceTab('feasibility')">
+                        <i class="fa-solid fa-flask-vial"></i> Replication Advisory
+                    </button>
+                    <button class="tab-link" id="tab-btn-reflection" onclick="switchWorkspaceTab('reflection')">
+                        <i class="fa-solid fa-comments"></i> Human-Agent Reflection
+                    </button>
+                    <button class="tab-link" id="tab-btn-traces" onclick="switchWorkspaceTab('traces')">
+                        <i class="fa-solid fa-chart-line"></i> Pipeline Traces
+                    </button>
+                </nav>
+
+                <!-- Workspace Panes -->
+                <div class="workspace-panes-container">
+                    
+                    <!-- Pane 1: Logs -->
+                    <div id="pane-logs" class="workspace-pane active">
+                        <div class="log-header">
+                            <h3><i class="fa-solid fa-gears"></i> Multi-Agent Execution Log</h3>
+                            <span id="log-status" class="status-indicator processing">Processing...</span>
+                        </div>
+                        <div class="log-console" id="log-console-content">
+                            <!-- Logs will stream here -->
+                        </div>
+                    </div>
+
+                    <!-- Pane 2: Peer Review -->
+                    <div id="pane-review" class="workspace-pane">
+                        <div class="review-layout">
+                            <div class="score-card-container">
+                                <div class="score-card">
+                                    <div class="score-value" id="review-score">4</div>
+                                    <div class="score-label">Overall Rating (1-5)</div>
+                                    <div class="score-stars" id="review-stars">
+                                        <i class="fa-solid fa-star"></i>
+                                        <i class="fa-solid fa-star"></i>
+                                        <i class="fa-solid fa-star"></i>
+                                        <i class="fa-solid fa-star"></i>
+                                        <i class="fa-regular fa-star"></i>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="review-details">
+                                <div class="review-block">
+                                    <h4>Strengths</h4>
+                                    <ul id="review-strengths" class="bullet-list positive">
+                                        <!-- Bullets -->
+                                    </ul>
+                                </div>
+                                <div class="review-block">
+                                    <h4>Weaknesses</h4>
+                                    <ul id="review-weaknesses" class="bullet-list negative">
+                                        <!-- Bullets -->
+                                    </ul>
+                                </div>
+                                <div class="review-block">
+                                    <h4>Scientific Novelty</h4>
+                                    <p id="review-novelty" class="essay-paragraph"></p>
+                                </div>
+                                <div class="review-block">
+                                    <h4>Technical Correctness</h4>
+                                    <p id="review-correctness" class="essay-paragraph"></p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Pane 3: Feasibility & Replication Advisory -->
+                    <div id="pane-feasibility" class="workspace-pane">
+                        <div class="feasibility-layout">
+                            <div class="feasibility-summary-cards">
+                                <div class="feas-summary-card">
+                                    <i class="fa-solid fa-coins icon"></i>
+                                    <div class="label">Estimated Costs</div>
+                                    <div class="val" id="feasibility-cost">Medium ($1,000 - $10,000)</div>
+                                </div>
+                                <div class="feas-summary-card">
+                                    <i class="fa-solid fa-gauge-high icon"></i>
+                                    <div class="label">Manufacturing Readiness</div>
+                                    <div class="val" id="feasibility-mrl">MRL 3-4 (Lab Scale)</div>
+                                </div>
+                            </div>
+
+                            <div class="feasibility-block">
+                                <h4>Required Materials, Equipment &amp; Sourcing</h4>
+                                <table class="materials-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Item Name</th>
+                                            <th>Purpose / Usage</th>
+                                            <th>Accessibility</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="feasibility-materials-body">
+                                        <!-- Table entries -->
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <div class="feasibility-block">
+                                <h4>Recommended Replication Workflow</h4>
+                                <ol id="feasibility-steps" class="step-list">
+                                    <!-- List items -->
+                                </ol>
+                            </div>
+
+                            <div class="feasibility-block">
+                                <h4>Engineering Advisory &amp; Safety Considerations</h4>
+                                <div class="advisory-callout" id="feasibility-advisory">
+                                    <!-- Callout text -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Pane 4: Reflection -->
+                    <div id="pane-reflection" class="workspace-pane">
+                        <div class="reflection-layout">
+                            <div class="reflection-timeline" id="reflection-timeline-container">
+                                <!-- Reflection loop records -->
+                            </div>
+                            
+                            <div class="feedback-input-container">
+                                <h4>Provide Feedback or Critique</h4>
+                                <p class="input-instruction">Point out corrections, laboratory equipment constraints, or specify custom constraints. The Reflection Agent will re-coordinate with other agents and refine their assessments.</p>
+                                <textarea id="feedback-textarea" placeholder="e.g. We only have access to standard laboratory spin coaters and cannot source customized molecular beam epitaxy. Please recalculate the feasibility steps under this hardware restriction..."></textarea>
+                                <button class="btn btn-crimson" id="btn-submit-feedback" onclick="submitFeedback()">
+                                    <i class="fa-solid fa-arrows-spin"></i> Submit Critique to Reflection Agent
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Pane 5: Traces -->
+                    <div id="pane-traces" class="workspace-pane">
+                        <div class="traces-layout">
+                            <div class="traces-sidebar">
+                                <h3>Agent Steps</h3>
+                                <div class="traces-timeline" id="traces-timeline-container">
+                                    <!-- Spans go here -->
+                                </div>
+                            </div>
+                            <div class="trace-details-panel" id="trace-details-panel">
+                                <div class="empty-trace-details">
+                                    <i class="fa-solid fa-code-branch"></i>
+                                    <p>Select an agent step from the timeline to view detailed inputs, outputs, and execution telemetry.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </article>
+        </main>
+    </div>
+
+    <!-- Category Modal -->
+    <div id="category-modal" class="modal">
+        <div class="modal-content">
+            <header class="modal-header">
+                <h3>Add New Taxonomy Category</h3>
+                <button class="btn-close" onclick="closeAddCategoryModal()">&times;</button>
+            </header>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="modal-cat-name">Category Name</label>
+                    <input type="text" id="modal-cat-name" placeholder="e.g. Synthetic Biology" />
+                </div>
+                <div class="form-group">
+                    <label for="modal-cat-desc">Description</label>
+                    <textarea id="modal-cat-desc" placeholder="Details about this field of research..."></textarea>
+                </div>
+            </div>
+            <footer class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeAddCategoryModal()">Cancel</button>
+                <button class="btn btn-crimson" onclick="createCategory()">Create Category</button>
+            </footer>
+        </div>
+    </div>
+
+    <!-- Global Loading Overlay -->
+    <div id="global-loading" class="global-loading" style="display: none;">
+        <div class="spinner-container">
+            <div class="academic-spinner"></div>
+            <p id="global-loading-text">Processing paper pipeline...</p>
+        </div>
+    </div>
+
+    <script src="/static/app.js"></script>
+</body>
+</html>
