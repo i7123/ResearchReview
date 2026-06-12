@@ -409,10 +409,12 @@ textarea {
 }
 
 .paper-item {
+    position: relative;
     background-color: var(--bg-page);
     border: 1px solid var(--border-ink);
     border-radius: 2px;
     padding: 12px;
+    padding-right: 28px; /* Leave space for delete button */
     cursor: pointer;
     transition: box-shadow 0.2s, border-color 0.2s;
     box-shadow: var(--shadow-subtle);
@@ -424,6 +426,33 @@ textarea {
 .paper-item:hover, .paper-item.selected {
     border-color: var(--accent-burgundy);
     box-shadow: var(--shadow-card);
+}
+
+.btn-delete-paper {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    font-size: 11px;
+    padding: 4px;
+    border-radius: 2px;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    transition: color 0.2s, background-color 0.2s;
+    z-index: 5;
+}
+
+.paper-item:hover .btn-delete-paper {
+    display: flex;
+}
+
+.btn-delete-paper:hover {
+    color: var(--color-negative);
+    background-color: var(--accent-burgundy-light);
 }
 
 .paper-item .paper-item-title {

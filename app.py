@@ -385,6 +385,35 @@ def export_csv():
         headers=headers
     )
 
+@app.delete("/api/papers/{paper_id}")
+def delete_paper(paper_id: str):
+    # 1. Fetch paper details to get file_path
+    paper = database.get_paper(paper_id)
+    if not paper:
+        raise HTTPException(status_code=404, detail="Paper not found")
+        
+    file_path = paper.get("file_path")
+    
+    # 2. Delete from database
+    database.delete_paper(paper_id)
+    
+    # 3. Clean up PDF file on disk
+    if file_path and os.path.exists(file_path):
+        try:
+            os.remove(file_path)
+        except Exception as e:
+            print(f"Error removing PDF file {file_path}: {e}")
+            
+    # 4. Clean up log file on disk
+    log_path = f"data/logs/{paper_id}.log"
+    if os.path.exists(log_path):
+        try:
+            os.remove(log_path)
+        except Exception as e:
+            print(f"Error removing log file {log_path}: {e}")
+            
+    return {"status": "success", "message": "Paper and associated files deleted successfully"}
+
 @app.post("/api/import/pdf")
 def import_pdf(background_tasks: BackgroundTasks, file: UploadFile = File(...), model: str = Form(agents.DEFAULT_MODEL)):
     paper_id = uuid.uuid4().hex

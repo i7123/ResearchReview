@@ -188,6 +188,9 @@ function renderPapers() {
         
         return `
             <div class="paper-item ${isSelected}" onclick="selectPaper('${paper.id}')">
+                <button class="btn-delete-paper" onclick="deletePaper('${paper.id}', event)" title="Delete Paper">
+                    <i class="fa-solid fa-trash-can"></i>
+                </button>
                 <div class="paper-item-title">${escapeHTML(paper.title)}</div>
                 <div class="paper-item-authors">${escapeHTML(paper.authors || 'Unknown Authors')}</div>
                 <div class="paper-item-meta">
@@ -197,6 +200,38 @@ function renderPapers() {
             </div>
         `;
     }).join('');
+}
+
+async function deletePaper(paperId, event) {
+    if (event) {
+        event.stopPropagation();
+    }
+    
+    if (!confirm("Are you sure you want to delete this paper and all its associated reviews/traces?")) {
+        return;
+    }
+    
+    try {
+        const res = await fetch(`/api/papers/${paperId}`, {
+            method: 'DELETE'
+        });
+        if (!res.ok) {
+            const errData = await res.json();
+            throw new Error(errData.detail || 'Failed to delete paper');
+        }
+        
+        // If the deleted paper was selected, clear selection
+        if (selectedPaperId === paperId) {
+            selectedPaperId = null;
+            document.getElementById('paper-workspace').style.display = 'none';
+            document.getElementById('empty-state').style.display = 'flex';
+        }
+        
+        // Refresh paper list
+        fetchPapers();
+    } catch (err) {
+        alert('Error: ' + err.message);
+    }
 }
 
 // Filter Papers in library by Search Term

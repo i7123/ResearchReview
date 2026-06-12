@@ -6,6 +6,7 @@ DB_PATH = "data/research_review.db"
 def get_db_connection():
     os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
     conn = sqlite3.connect(DB_PATH)
+    conn.execute("PRAGMA foreign_keys = ON")
     conn.row_factory = sqlite3.Row
     return conn
 
@@ -212,3 +213,10 @@ def get_agent_traces(paper_id):
     traces = conn.execute("SELECT * FROM agent_traces WHERE paper_id = ? ORDER BY start_time ASC", (paper_id,)).fetchall()
     conn.close()
     return [dict(t) for t in traces]
+
+def delete_paper(paper_id):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM papers WHERE id = ?", (paper_id,))
+    conn.commit()
+    conn.close()
